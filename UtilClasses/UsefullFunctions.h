@@ -17,6 +17,13 @@ public:
 
     static double dotProduct(std::vector<int> vector0, std::vector<double> vector1);
 
+
+
+    static int mod(int a, int b);
+
+    static long long int lmod(long long a, long long b);
+
+
 };
 
 int Functions::dotProduct(std::vector<int> vector0, std::vector<int> vector1) {
@@ -47,6 +54,7 @@ double Functions::dotProduct(std::vector<double> vector0, std::vector<double> ve
     return sum;
 }
 
+
 double Functions::dotProduct(std::vector<int> vector0, std::vector<double> vector1) {
     if (vector0.size() != vector1.size()) {
         throw new std::invalid_argument("dot product of different dimension arrays");
@@ -59,6 +67,14 @@ double Functions::dotProduct(std::vector<int> vector0, std::vector<double> vecto
     }
 
     return sum;
+}
+
+int Functions::mod(int a, int b) {
+    return (b + (a % b)) % b;
+}
+
+long long int Functions::lmod(long long a, long long b) {
+    return (b + (a % b)) % b;
 }
 
 

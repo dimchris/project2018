@@ -10,9 +10,11 @@
 template<class T>
 class HashFunction {
 public:
-    HashFunction(int d) : d(d) {}
+    explicit HashFunction(int d) : d(d) {}
 
-    virtual long getKey(std::vector<T> p) = 0;
+    virtual long getKey(std::vector<T> *p) = 0;
+
+    int getD(){ return d;}
 
 protected:
     int d;

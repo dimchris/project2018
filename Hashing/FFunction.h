@@ -7,22 +7,25 @@
 
 
 #include "HashFunction.h"
-#include "functions.h"
+#include "../UtilClasses/UsefullFunctions.h"
+#include "../UtilClasses/MyGenerator.h"
 #include <random>
 #include <assert.h>
 #include <cmath>
 #include <limits>
+#include <iostream>
+#include <chrono>
 
 
 template<class T>
 
 class FFunction : public HashFunction<T> {
 public:
-    virtual long getKey(std::vector<T> p);
+    virtual long getKey(std::vector<T> *p);
 
     int h(std::vector<T> p, std::vector<double> v, double tau);
 
-    int phi(std::vector<T> p);
+    int phi(std::vector<T> *p);
 
     FFunction(int d, int k, int tableSize, int *r, int w);
 
@@ -42,7 +45,10 @@ private:
 };
 
 template<class T>
-long FFunction<T>::getKey(std::vector<T> p) {
+long FFunction<T>::getKey(std::vector<T> *p) {
+    if (p->size() != HashFunction<T>::d) {
+        throw std::invalid_argument("Incompatible dimensions: hashFunction, vector");
+    }
     return this->phi(p);
 }
 
@@ -53,7 +59,7 @@ FFunction<T>::FFunction(int d, int k, int tableSize, int *r, int w):HashFunction
 
 
     // initialize vector array
-    v = new std::vector<double>*[k];
+    v = new std::vector<double> *[k];
 
     // generate the random vectors
     generateRandVector();
@@ -61,12 +67,13 @@ FFunction<T>::FFunction(int d, int k, int tableSize, int *r, int w):HashFunction
     //cp the r table && set tau
     this->r = new int[k];
     this->tau = new double[k];
-    std::default_random_engine generator;
-    std::uniform_real_distribution<double> distribution(0.0, w);
+    MyGenerator *myGenerator = MyGenerator::getInstance();
 
+    std::uniform_real_distribution<double> distribution(0.0, w);
+    std::default_random_engine *generator = myGenerator->getGenerator();
     for (int i = 0; i < k; i++) {
         this->r[i] = r[i];
-        this->tau[i] = distribution(generator);
+        this->tau[i] = distribution(*generator);
     }
 
 
@@ -87,7 +94,7 @@ FFunction<T>::~FFunction() {
 }
 
 template<class T>
-int FFunction<T>::h(std::vector<T> p, std::vector<double > v, double tau) {
+int FFunction<T>::h(std::vector<T> p, std::vector<double> v, double tau) {
     double result;
     assert(p.size() == HashFunction<T>::d);
     // calc h (check presentation)
@@ -103,26 +110,27 @@ void FFunction<T>::generateRandVector() {
     int d = HashFunction<T>::d;
 
     // generate the k random vectors
-    std::default_random_engine generator;
-    std::normal_distribution<double> distribution(1.0, 0.0);
+    MyGenerator *myGenerator = MyGenerator::getInstance();
+    std::default_random_engine *generator = myGenerator->getGenerator();
+    std::normal_distribution<double> distribution(0.0, 1.0);
     for (int i = 0; i < k; i++) {
         std::vector<double> *vector = new std::vector<double>();
         for (int j = 0; j < d; j++) {
-            vector->push_back(distribution(generator));
+            vector->push_back(distribution(*generator));
         }
         v[i] = vector;
     }
 }
 
 template<class T>
-int FFunction<T>::phi(std::vector<T> p) {
-    assert(p.size() == HashFunction<T>::d);
-    int result = 0;
+int FFunction<T>::phi(std::vector<T> *p) {
+    assert(p->size() == HashFunction<T>::d);
+    long long result = 0;
     for (int i = 0; i < k; i++) {
-        result += (r[i] * h(p, *(v[i]), tau[i])) % maxPrime;
+        result += r[i] * h(*p, *(v[i]), tau[i]);
     }
-    result %= maxPrime;
-    result %= tableSize;
+    result  = Functions::lmod(result, maxPrime);
+    result = Functions::lmod(result, tableSize);
 
     return result;
 }
