@@ -21,20 +21,21 @@ private:
     int l;
     int d;
     int tableSize;
-    HashTable<T> **hashTables;
     HashFunction<T> **hashFunctions;
     std::list<MyVector<T> *> vectors;
-    Metric<T> *metric;
-    double c;
     double epsilon;
+protected:
+    double c;
+    Metric<T> *metric;
+    HashTable<T> **hashTables;
 public:
     LSH(int d, int l, int tableSize, HashFunction<T> **hashFunction, Metric<T> *metric, double epsilon);
 
     ~LSH();
 
-    std::set<MyVector<T> *, Compare<T> > getNeighbors(MyVector<T> *vector);
+    virtual std::set<MyVector<T> *, Compare<T> > getNeighbors(MyVector<T> *vector);
 
-    std::set<Neighbor<T> *, Compare<T> > getNeighbors(MyQuery<T> *query);
+    virtual std::set<Neighbor<T> *, Compare<T> > getNeighbors(MyQuery<T> *query);
 
     void addPoint(MyVector<T> *vector);
 
@@ -109,11 +110,9 @@ std::set<MyVector<T> *, Compare<T> > LSH<T>::getNeighbors(MyVector<T> *vector) {
         } catch (std::invalid_argument e) {
             throw;
         }
-        int size = 0;
         typename std::list<MyVector<T> *>::const_iterator iterator;
         for (iterator = bucket.begin(); iterator != bucket.end(); ++iterator) {
             neighbors.insert(*iterator);
-            size = neighbors.size();
         }
     }
 

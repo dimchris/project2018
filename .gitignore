@@ -8,3 +8,7 @@ CMakeLists\.txt
 *.un~
 
 input_small~
+
+query_small~
+
+*.txt
