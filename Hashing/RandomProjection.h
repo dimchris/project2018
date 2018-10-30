@@ -75,7 +75,7 @@ long RandomProjection<T>::G(std::vector<T> *p) {
     for (int i = 1; i < k; i++) {
         result = result<<1;
         int ht = h(p, r[i]);
-        result += ht;
+        result |= ht;
     }
     return result;
 }

@@ -25,7 +25,7 @@ public:
 
     int h(std::vector<T> p, std::vector<double> v, double tau);
 
-    int phi(std::vector<T> *p);
+    virtual int phi(std::vector<T> *p);
 
     FFunction(int d, int k, int tableSize, int *r, int w);
 
@@ -33,15 +33,19 @@ public:
 
 private:
 
-    int k;
-    std::vector<double> **v;
     int *r;
-    double *tau;
     int w;
     int tableSize;
     int maxPrime;
 
     void generateRandVector();
+
+protected:
+    double *tau;
+
+    int k;
+
+    std::vector<double> **v;
 };
 
 template<class T>
@@ -71,10 +75,11 @@ FFunction<T>::FFunction(int d, int k, int tableSize, int *r, int w):HashFunction
 
     std::uniform_real_distribution<double> distribution(0.0, w);
     std::default_random_engine *generator = myGenerator->getGenerator();
-    for (int i = 0; i < k; i++) {
-        this->r[i] = r[i];
-        this->tau[i] = distribution(*generator);
-    }
+    if (r != NULL)
+        for (int i = 0; i < k; i++) {
+            this->r[i] = r[i];
+            this->tau[i] = distribution(*generator);
+        }
 
 
     // set max prime
@@ -83,7 +88,8 @@ FFunction<T>::FFunction(int d, int k, int tableSize, int *r, int w):HashFunction
 
 template<class T>
 FFunction<T>::~FFunction() {
-    delete[] r;
+    if (r != NULL)
+        delete[] r;
     //delete each vector
     for (int i = 0; i < sizeof(v); i++) {
         delete v[i];
@@ -129,7 +135,7 @@ int FFunction<T>::phi(std::vector<T> *p) {
     for (int i = 0; i < k; i++) {
         result += r[i] * h(*p, *(v[i]), tau[i]);
     }
-    result  = Functions::lmod(result, maxPrime);
+    result = Functions::lmod(result, maxPrime);
     result = Functions::lmod(result, tableSize);
 
     return result;

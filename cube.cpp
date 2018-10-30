@@ -15,6 +15,8 @@
 #include "LSH/CosineLSHInt.h"
 #include "Hashing/RandomProjectionCube.h"
 #include "HyperCube/CosineHyperCubeInt.h"
+#include "Hashing/FFunctionCube.h"
+#include "HyperCube/EuclideanHyperCubeInt.h"
 #include <math.h>
 
 int main(int argc, char *argv[]) {
@@ -103,7 +105,7 @@ int main(int argc, char *argv[]) {
     // prepare the hashfunctions
     for (int i = 0; i < l; i++) {
         if (metric == "euclidean") {
-//            hashFunctions[i] = new FFunctionCube<int>(d, dd, w);
+            hashFunctions[i] = new FFunctionCube<int>(d, dd, w);
 
         } else
             hashFunctions[i] = new RandomProjectionCube<int>(d, dd);
@@ -114,7 +116,7 @@ int main(int argc, char *argv[]) {
     LSH<int> *lhs = NULL;
     try {
         if (metric == "euclidean") {
-//            lhs = new EuclideanCubeInt(d, m, dd, probes, hashFunctions, 0);
+            lhs = new EuclideanHyperCubeInt(d, m, dd, probes, hashFunctions, 0);
         } else {
             tableSize = (int) pow(2, dd);
             lhs = new CosineHyperCubeInt(d, m, dd, probes, hashFunctions, 0);
