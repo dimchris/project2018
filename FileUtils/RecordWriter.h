@@ -32,7 +32,7 @@ private:
 };
 
 template<class T>
-void RecordWriter<T>::writeRecord(MyQuery<T> *query, std::set<Neighbor<T> *, Compare<T>> neighbors,
+void RecordWriter<T>::writeRecord(MyQuery<T> *query, std::set<Neighbor<T> *, Compare<T> > neighbors,
                                   Neighbor<int> *trueNeighbor, double timeLSH, double timeTrue) {
     FileWriter::writeLine("Query:");
     FileWriter::writeLine(query->getVector()->getId());

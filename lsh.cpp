@@ -210,7 +210,6 @@ int main(int argc, char *argv[]) {
         delete hashFunctions[i];
     }
     log->destroy();
-    delete log;
     log->log("DONE");
     return 0;
 }
