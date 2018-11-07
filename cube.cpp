@@ -223,7 +223,6 @@ int main(int argc, char *argv[]) {
         delete hashFunctions[i];
     }
     logger->destroy();
-    delete logger;
     logger->log("DONE");
     return 0;
 }
