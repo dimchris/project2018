@@ -29,16 +29,16 @@ public:
 
 template<class T>
 MyQuery<T> * QueryReader<T>::getQuery() {
-    std::vector<std::string> *record;
-    record = CSVReader::getRecord();
-    if (record == NULL) {
-        return NULL;
-    }
-    MyVector<T> *myvector = NULL;
-    MyQuery<T> *myQuery = NULL;
-    std::vector<int> *vector = new std::vector<int>();
-    std::string id = record->at(0);
-    for (int j = 1; j <record->size(); j++) { //dimension + one col for id
+        std::vector<std::string> *record;
+        record = CSVReader::getRecord();
+        if (record == NULL) {
+            return NULL;
+        }
+        MyVector<T> *myvector = NULL;
+        MyQuery<T> *myQuery = NULL;
+        std::vector<int> *vector = new std::vector<int>();
+        std::string id = record->at(0);
+        for (int j = 1; j <record->size(); j++) { //dimension + one col for id
         vector->push_back(getValue(record->at(j)));
     }
     myvector = new MyVector<T>(id, vector);

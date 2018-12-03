@@ -27,6 +27,13 @@ private:
 protected:
     double c;
     Metric<T> *metric;
+public:
+    void setMetric(Metric<T> *metric);
+
+public:
+    Metric<T> *getMetric() const;
+
+protected:
     HashTable<T> **hashTables;
 public:
     LSH(int d, int l, int tableSize, HashFunction<T> **hashFunction, Metric<T> *metric, double epsilon);
@@ -44,6 +51,8 @@ public:
     void setEpsilon(double epsilon);
 
     Neighbor<T> *trueNearest(MyQuery<T> *q);
+
+    int sizeOf();
 
 };
 
@@ -193,6 +202,24 @@ Neighbor<T> *LSH<T>::trueNearest(MyQuery<T> *q) {
     if (closest != NULL) {
         return new Neighbor<T>(closest, distance0);
     }
+}
+
+template<class T>
+int LSH<T>::sizeOf() {
+    int size = 0;
+    for (int i = 0; i < i < l; ++i) {
+        size += hashTables[i]->getSize();
+    }
+}
+
+template<class T>
+Metric<T> *LSH<T>::getMetric() const {
+    return metric;
+}
+
+template<class T>
+void LSH<T>::setMetric(Metric<T> *metric) {
+    LSH::metric = metric;
 }
 
 

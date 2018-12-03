@@ -22,7 +22,7 @@ public:
     double getR() const {
         return r;
     };
-    ~MyQuery(){delete vector;}
+    ~MyQuery(){}
 };
 
 

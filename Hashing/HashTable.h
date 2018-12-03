@@ -19,6 +19,10 @@ template<class T>
 class HashTable {
 private:
     int size;
+public:
+    int getSize() const;
+
+private:
     int d;
     std::list<MyVector<T> *> *vectors;
     HashFunction<T> *hashFunction;
@@ -29,7 +33,6 @@ public:
             throw std::invalid_argument("Incompatible dimensions: hashtable, hashFunction");
         }
         vectors = new std::list<MyVector<T> *>[size];
-
     };
 
     ~HashTable();
@@ -98,6 +101,11 @@ int HashTable<T>::getKey(MyVector<T> *vector) {
 template<class T>
 std::list<MyVector<T> *> HashTable<T>::getBucket(MyVector<T> *vector) {
     return getBucket(getKey(vector));
+}
+
+template<class T>
+int HashTable<T>::getSize() const {
+    return size;
 }
 
 

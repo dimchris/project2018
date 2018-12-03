@@ -8,7 +8,8 @@
 
 #include <vector>
 #include <string>
-template <class T>
+
+template<class T>
 class MyVector {
 private:
     std::string id;
@@ -30,12 +31,30 @@ public:
     void setVector(std::vector<T> *vector) {
         MyVector::vector = vector;
     }
-    int getSize(){ return size;}
 
-    MyVector(std::string id, std::vector<T> *vector):id(id),vector(vector){size = vector->size();}
-    ~MyVector(){delete vector;}
+    int getSize() const { return size; }
+
+    MyVector(std::string id, std::vector<T> *vector) : id(id), vector(vector) { size = vector->size(); }
+
+    ~MyVector() { delete vector; }
+
+    inline void add(const MyVector<T> &a);
+
 
 };
+
+template<>
+inline void MyVector<double>::add(const MyVector<double> &a) {
+    for (int j = 0; j < this->getSize(); ++j) {
+        this->vector->at(j) +=  a.getVector()->at(j);
+    }
+}
+template<>
+inline void MyVector<int>::add(const MyVector<int> &a) {
+    for (int j = 0; j < this->getSize(); ++j) {
+        this->vector->at(j) +=  a.getVector()->at(j);
+    }
+}
 
 
 #endif //PROJECT2018_MYVECTOR_H

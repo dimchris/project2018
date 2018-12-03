@@ -13,6 +13,8 @@
 
 template<class T>
 class EuclideanMetric : public Metric<T> {
+
+public:
     double distance(MyVector<T> *vector0, MyVector<T> *vector1) override {
         if (vector0->getSize() != vector1->getSize()) {
             throw std::invalid_argument("Euclidean distance: incompatible vector dimensions");
@@ -22,11 +24,10 @@ class EuclideanMetric : public Metric<T> {
             dist += pow(1.0 * vector0->getVector()->at(i) - 1.0 * vector1->getVector()->at(i), 2);
         }
 
-        assert(dist > 0);
+        assert(dist >= 0);
 
         return sqrt(dist);
     }
-
 };
 
 

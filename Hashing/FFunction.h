@@ -80,6 +80,9 @@ FFunction<T>::FFunction(int d, int k, int tableSize, int *r, int w):HashFunction
             this->r[i] = r[i];
             this->tau[i] = distribution(*generator);
         }
+    for (int i = 0; i < k; i++) {
+        this->tau[i] = distribution(*generator);
+    }
 
 
     // set max prime

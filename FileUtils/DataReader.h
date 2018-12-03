@@ -20,8 +20,19 @@ public:
 private:
 
     T getValue(std::string &val);
+    void pushValue(std::vector<T> *vector, std::string value);
 
-public:
+        public:
+    DataReader(std::string filename, char delimiter, bool header) : CSVReader(filename, delimiter, header), metric(NULL) {
+        if(header){
+            std::vector<std::string> *values = new std::vector<std::string>;
+            *values = Utils::split(*CSVReader::header, delimiter);
+            if (values->size() > 1) {
+                metric = new std::string(values->at(1));
+            }
+            delete values;
+        }
+    };
     DataReader(std::string filename, char delimiter) : CSVReader(filename, delimiter, true), metric(NULL) {
         std::vector<std::string> *values = new std::vector<std::string>;
         *values = Utils::split(*CSVReader::header, ' ');
@@ -43,10 +54,10 @@ MyVector<T> *DataReader<T>::getDataRecord() {
         return NULL;
     }
     MyVector<T> *myvector = NULL;
-    std::vector<int> *vector = new std::vector<int>();
+    std::vector<T> *vector = new std::vector<T>();
     std::string id = record->at(0);
     for (int j = 1; j < record->size(); j++) { //dimension + one col for id
-        vector->push_back(std::stoi(record->at(j)));
+        pushValue(vector, record->at(j));
     }
     myvector = new MyVector<T>(id, vector);
 
@@ -68,6 +79,15 @@ std::string *DataReader<T>::getMetric() const {
 template<>
 double DataReader<double>::getValue(std::string &val) {
     return std::stod(val);
+}
+
+template<>
+void DataReader<double>::pushValue(std::vector<double> *vector, std::string value){
+    vector->push_back(std::stod(value));
+}
+template<>
+void DataReader<int>::pushValue(std::vector<int > *vector, std::string value){
+    vector->push_back(std::stoi(value));
 }
 
 
