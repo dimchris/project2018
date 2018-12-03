@@ -67,7 +67,7 @@ MyVector<T> *DataReader<T>::getDataRecord() {
 }
 
 template<>
-int DataReader<int>::getValue(std::string &val) {
+inline int DataReader<int>::getValue(std::string &val) {
     return std::stoi(val);
 }
 
@@ -77,16 +77,16 @@ std::string *DataReader<T>::getMetric() const {
 }
 
 template<>
-double DataReader<double>::getValue(std::string &val) {
+inline double DataReader<double>::getValue(std::string &val) {
     return std::stod(val);
 }
 
 template<>
-void DataReader<double>::pushValue(std::vector<double> *vector, std::string value){
+inline void DataReader<double>::pushValue(std::vector<double> *vector, std::string value){
     vector->push_back(std::stod(value));
 }
 template<>
-void DataReader<int>::pushValue(std::vector<int > *vector, std::string value){
+inline void DataReader<int>::pushValue(std::vector<int > *vector, std::string value){
     vector->push_back(std::stoi(value));
 }
 
