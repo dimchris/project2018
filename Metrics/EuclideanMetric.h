@@ -23,9 +23,6 @@ public:
         for (int i = 0; i < vector0->getSize(); i++) {
             dist += pow(1.0 * vector0->getVector()->at(i) - 1.0 * vector1->getVector()->at(i), 2);
         }
-
-        assert(dist >= 0);
-
         return sqrt(dist);
     }
 };
