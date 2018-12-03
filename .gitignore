@@ -12,3 +12,7 @@ input_small~
 query_small~
 
 *.txt
+
+*.d
+
+*.x
