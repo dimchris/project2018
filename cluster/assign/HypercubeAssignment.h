@@ -14,7 +14,7 @@ class HypercubeAssignment : public Assignment<T> {
 private:
     HyperCube<T> *hc;
 public:
-    HypercubeAssignment(HyperCube<T> *hp) : Assignment<T>(hc->getMetric()), hc(hc) {}
+    HypercubeAssignment(HyperCube<T> *hc) : Assignment<T>(hc->getMetric()), hc(hc) {}
 
     void assign(std::vector<MyVector<T> *> *sample, std::vector<Cluster<T> *> *clusters) override {
         // init clusters
