@@ -25,6 +25,12 @@
 #include "cluster/assign/LSHAssignment.h"
 #include "LSH/EuclideanLSH.h"
 #include "Hashing/FFunction.h"
+#include "Metrics/CosineMetric.h"
+#include "cluster/assign/HypercubeAssignment.h"
+#include "Hashing/RandomProjection.h"
+#include "LSH/CosineLSHInt.h"
+#include "HyperCube/EuclideanHyperCubeInt.h"
+#include "HyperCube/CosineHyperCubeInt.h"
 
 using namespace std;
 
@@ -35,6 +41,10 @@ int main(int argc, char *argv[]) {
     string type_metric = "euclidean";
     string complete = "false";
     double epsilon = 0.000001;
+    int r[] = {1, 1, 1, 1};
+    int probes = 2;
+    int m = 10;
+    int w = 4;
     // get logger
     MyLogger *logger = MyLogger::getInstance();
     logger->setLevel(MyLogger::INFO);
@@ -77,6 +87,12 @@ int main(int argc, char *argv[]) {
         if (!config.get("number_of_hash_tables").empty()) {
             L = stoi(config.get("number_of_hash_tables"));
         }
+        if (!config.get("number_of_probes").empty()) {
+            probes = stoi(config.get("number_of_hash_tables"));
+        }
+        if (!config.get("number_of_max_points").empty()) {
+            m = stoi(config.get("number_of_hash_tables"));
+        }
     } catch (std::runtime_error) {
         logger->error("could not find config file:");
         logger->error(file_configure);
@@ -103,102 +119,159 @@ int main(int argc, char *argv[]) {
         dataRecord = NULL;
         tableSize++;
     }
+    // set metric
+    Metric<double> *metric;
+    if (type_metric == "euclidean") {
+        metric = new EuclideanMetric<double>();
+    } else {
+        metric = new CosineMetric<double>();
+    }
+    // set hashfunctions
+    // prepare the hashfunctions
+    HashFunction<double> *hashFunctions[L];
+    for (int i = 0; i < L; i++) {
+        if (type_metric == "euclidean")
+            hashFunctions[i] = new FFunction<double>(d, kk, tableSize / 8, r, w);
+        else
+            hashFunctions[i] = new RandomProjection<double>(d, kk);
 
-    // init
-    EuclideanMetric<double> *metric = new EuclideanMetric<double>();
+    }
 
-    ClusterInit<double> *init = new RandomInit<double>(k);
+    // set lsh
+    LSH<double> *lsh;
+    if (type_metric == "euclidean") {
+        lsh = new EuclideanLSH<double>(d, L, tableSize / 8, hashFunctions, 0);
+    } else {
+        lsh = new CosineLSH<double>(d, L, tableSize / 8, hashFunctions, 0);
+    }
+
+    // set hc
+    HyperCube<double> *hc;
+    if (type_metric == "euclidean") {
+        hc = new EuclideanHyperCube<double>(d, m, kk, probes, hashFunctions, 0);
+    } else {
+        tableSize = (int) pow(2, kk);
+        hc = new CosineHyperCube<double>(d, m, kk, probes, hashFunctions, 0);
+    }
+
+    // inits
+    ClusterInit<double> *inits[2] = {
+            new RandomInit<double>(k),
+            new KmeansppInit<double>(k, metric)
+    };
+    //Assigments
+    Assignment<double> *assignments[3] = {
+            new PAMAssignment<double>(metric),
+            new LSHAssignment<double>(lsh),
+            new HypercubeAssignment<double>(hc)
+    };
+    //updates
+    Update<double> *updates[2] = {
+            new VUpdate<double>(),
+            new PAM<double>(metric)
+    };
+
+
     //init clusters
     std::vector<Cluster<double> *> clusters(k);
-//    Assignment<double> *assign = new LloydAssignment<double>(metric);
-    int r[] = {1, 1, 1, 1};
-    int w = 4;
-    HashFunction<double> *hashFunctions[kk];
-    for (int i = 0; i < L; i++) {
-        hashFunctions[i] = new FFunction<double>(d, kk, tableSize/8, r, w);
-    }
-    LSH<double> *lsh = new EuclideanLSH<double>(d, L, tableSize/8, hashFunctions, 0);
-    for (int m = 0; m < sample->size(); ++m) {
-        lsh->addPoint(sample->at(m));
-    }
 
-    Assignment<double> *assign = new LSHAssignment<double>(lsh);
-
+    ClusterInit<double> *init;
+    Update<double> *update;
+    Assignment<double> *assignment;
+    Clustering<double> *clustering;
     Eval<double> *eval = new EvalDef<double>(metric);
-//    Update<double> *update = new VUpdate<double>();
-    Update<double> *update = new PAM<double>(metric);
 
-    Clustering<double> *clustering = new ClusteringArb<double>(sample, init, assign, update, eval, k, epsilon);
-
-    Timer timer = Timer();
-    timer.startTimer();
-    clustering->run();
-    double clustering_time = timer.stopTimer();
-
-    vector<Cluster<double> *> *clusters0 = clustering->getClusters();
-
-    Silhouette<double> *silhouette = new Silhouette<double>(clusters0, metric);
-    double sil = silhouette->getMean();
-
-    // output
-    string algorithm = "";
-    algorithm += std::to_string(init->getId());
-    algorithm += std::to_string(assign->getId());
-    algorithm += std::to_string(update->getId());
-
+    // output file
     ofstream myfile;
     myfile.open(file_output);
-    myfile << "Algorithm: " << algorithm << endl;
 
-    // each cluster
-    for (int j = 0; j < clusters0->size(); ++j) {
-        myfile << "CLUSTER-" << j << " {" << endl;
+    for (int i = 0; i < 2; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            for (int l = 0; l < 2; ++l) {
+                init = inits[i];
+                assignment = assignments[j];
+                update = updates[l];
+                if (l == 1)
+                    clustering = new ClusteringArb<double>(sample, init, assignment, update, eval, k, epsilon);
+                else
+                    clustering = new ClusteringVector<double>(sample, init, assignment, update, eval, k, epsilon);
+                Timer timer = Timer();
+                logger->log("Running Algorithm: " + to_string(i) + to_string(j) + to_string(l));
+                timer.startTimer();
+                clustering->run();
+                double clustering_time = timer.stopTimer();
+                logger->log("Elapsed time: " + to_string(clustering_time));
+                timer.reset();
 
-        myfile << "size: " << clusters0->at(j)->getAssigned()->size() << "," << endl;
+                // get clusters
+                vector<Cluster<double> *> *clusters0 = clustering->getClusters();
 
-        myfile << "centroid: ";
-        if (update->getId() == 2)
-            myfile << clusters0->at(j)->getCentroid()->getId() << "," << endl;
-        else {
-            myfile << endl << "[" << endl;
-            for (int i = 0; i < clusters0->at(j)->getCentroid()->getSize(); ++i) {
-                myfile << clusters0->at(j)->getCentroid()->getVector()->at(i);
-                if (i != clusters0->at(j)->getCentroid()->getSize() - 1)
-                    myfile << ", ";
-            }
-            myfile << "]" << endl;
-        }
+                // silhouette
+                Silhouette<double> *silhouette = new Silhouette<double>(clusters0, metric);
+                double sil = silhouette->getMean();
 
-    }
-    // total statistics
-    myfile << "clustering_time: " << clustering_time << endl;
-    myfile << "Silhouette: [";
-    for (int l = 0; l < clusters0->size(); ++l) {
-        myfile << clusters0->at(l)->getMeanSil() << ",";
-    }
-    myfile << sil << "]" << endl;
-    myfile.close();
-    // if complete
-    if (complete == "true") {
-        for (int j = 0; j < clusters0->size(); ++j) {
-            myfile << "CLUSTER-" << j << " {";
-            for (int i = 0; i < clusters0->at(j)->getAssigned()->size(); ++i) {
-                set<MyVector<double> *, Compare<double >> *assigned = clusters0->at(j)->getAssigned();
-                typename std::set<MyVector<double> *, Compare<double> >::iterator it;
-                for (it = assigned->begin(); it != assigned->end(); ++it) {
-                    myfile << (*it)->getId();
-                    it++;
-                    if (it != assigned->end())
-                        myfile << ",";
-                    it--;
+                // output
+                string algorithm = "";
+                algorithm += std::to_string(init->getId());
+                algorithm += std::to_string(assignment->getId());
+                algorithm += std::to_string(update->getId());
+
+
+                myfile << "Algorithm: " << to_string(i) + to_string(j) + to_string(l) << endl;
+
+                // each cluster
+                for (int j = 0; j < clusters0->size(); ++j) {
+                    myfile << "CLUSTER-" << j << " {" << endl;
+
+                    myfile << "size: " << clusters0->at(j)->getAssigned()->size() << "," << endl;
+
+                    myfile << "centroid: ";
+                    if (update->getId() == 2)
+                        myfile << clusters0->at(j)->getCentroid()->getId() << "," << endl;
+                    else {
+                        myfile << endl << "[" << endl;
+                        for (int i = 0; i < clusters0->at(j)->getCentroid()->getSize(); ++i) {
+                            myfile << clusters0->at(j)->getCentroid()->getVector()->at(i);
+                            if (i != clusters0->at(j)->getCentroid()->getSize() - 1)
+                                myfile << ", ";
+                        }
+                        myfile << "]" << endl;
+                    }
+
                 }
-                myfile << "}" << endl;
+                // total statistics
+                myfile << "clustering_time: " << clustering_time << endl;
+                myfile << "Silhouette: [";
+                for (int l = 0; l < clusters0->size(); ++l) {
+                    myfile << clusters0->at(l)->getMeanSil() << ",";
+                }
+                myfile << sil << "]" << endl;
+                myfile.close();
+                // if complete
+                if (complete == "true") {
+                    for (int j = 0; j < clusters0->size(); ++j) {
+                        myfile << "CLUSTER-" << j << " {";
+                        for (int i = 0; i < clusters0->at(j)->getAssigned()->size(); ++i) {
+                            set<MyVector<double> *, Compare<double >> *assigned = clusters0->at(j)->getAssigned();
+                            typename std::set<MyVector<double> *, Compare<double> >::iterator it;
+                            for (it = assigned->begin(); it != assigned->end(); ++it) {
+                                myfile << (*it)->getId();
+                                it++;
+                                if (it != assigned->end())
+                                    myfile << ",";
+                                it--;
+                            }
+                            myfile << "}" << endl;
+                        }
+
+                    }
+
+                }
+
             }
-
         }
-
     }
-
+    // close output file
     myfile.close();
 
 
