@@ -36,7 +36,8 @@ public:
                 new_centroid->getVector()->at(k) /= total;
             }
             // delete previous cendroid
-            delete clusters->at(i)->getCentroid();
+            if (clusters->at(i)->getCentroid()->getId().find("centroid_") != 0)
+                delete clusters->at(i)->getCentroid();
             // set new centroid
             clusters->at(i)->setCentroid(new_centroid);
         }
