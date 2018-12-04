@@ -5,6 +5,7 @@
 #ifndef CLUSTER_LSHASSIGNMENT_H
 #define CLUSTER_LSHASSIGNMENT_H
 
+#include <unordered_map>
 #include "Assignment.h"
 #include "../../LSH/LSH.h"
 
@@ -48,7 +49,7 @@ public:
             total_assigned = 0;
             // query for centroids until to more to be assigned
             //crete a map of all to be assigned
-            std::map<MyVector<T> *, std::vector<MyVector<T> *> > to_be_asigned;
+            std::unordered_map<MyVector<T> *, std::vector<MyVector<T> *> > to_be_asigned;
             std::set<MyVector<T> *, Compare<T>> to_be_removed;
             typename std::set<MyVector<T> *, Compare<T> >::iterator it;
             for (it = centroids.begin(); it != centroids.end(); ++it) {
@@ -60,22 +61,22 @@ public:
                 //add to the map
                 typename std::set<Neighbor<T> *, Compare<T> >::iterator it0;
                 for (it0 = neighbors0.begin(); it0 != neighbors0.end(); ++it0) {
-                    to_be_asigned[(*it0)->getVector()].push_back(*it);
+                    if (assign.find((*it0)->getVector()) != assign.end())
+                        to_be_asigned[(*it0)->getVector()].push_back(*it);
                 }
             }
             // check all the map
-            typename std::set<MyVector<T> *, Compare<T> >::iterator it0;
-            for (it0 = assign.begin(); it0 != assign.end(); ++it0) {
+            for (auto const &x : to_be_asigned) {
                 // if is not empty
-                if (!to_be_asigned[*it0].empty()) {
+                if (!x.second.empty()) {
                     // get the closest centroid
                     distance0 = std::numeric_limits<double>::max();
                     MyVector<T> *closest = NULL;
-                    for (int j = 0; j < to_be_asigned[*it0].size(); j++) {
-                        double distance = lsh->getMetric()->distance(to_be_asigned[*it0].at(j), *it0);
+                    for (int j = 0; j < x.second.size(); j++) {
+                        double distance = lsh->getMetric()->distance(x.second.at(j), x.first);
                         if (distance < distance0) {
                             distance0 = distance;
-                            closest = to_be_asigned[*it0].at(j);
+                            closest = x.second.at(j);
                         }
                     }
                     assert(closest != NULL);
@@ -83,10 +84,10 @@ public:
                     for (int i = 0; i < clusters->size(); ++i) {
                         if (clusters->at(i)->getCentroid() == closest) {
                             //assign
-                            clusters->at(i)->assign(*it0);
+                            clusters->at(i)->assign(x.first);
                             total_assigned++;
                             // add to remove list
-                            to_be_removed.insert(*it0);
+                            to_be_removed.insert(x.first);
                             break;
                         }
                     }
@@ -98,7 +99,7 @@ public:
             // remove from the assign set everything that is already assigned
             typename std::set<MyVector<T> *, Compare<T> >::iterator it2;
             for (it2 = to_be_removed.begin(); it2 != to_be_removed.end(); ++it2) {
-                assign.erase(*it2);
+                int t = assign.erase(*it2);
             }
         }
         // if more to be assigned assign them to the nearest centroid
