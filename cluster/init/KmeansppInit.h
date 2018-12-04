@@ -54,7 +54,7 @@ public:
             // get next cendroid
             int centroidIndex = dist(generator0);
             it = non_centroids.begin();
-            advance(it, floor(distribution(*generator)));
+            advance(it, centroidIndex);
             centroid = *it;
             // insert to centroids
             centroids.insert(centroid);
