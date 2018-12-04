@@ -156,10 +156,10 @@ int main(int argc, char *argv[]) {
     // set hc
     HyperCube<double> *hc;
     if (type_metric == "euclidean") {
-        hc = new EuclideanHyperCube<double>(d, m, kk, probes, hashFunctions, 0);
+        hc = new EuclideanHyperCube<double>(d, m, kk, probes, hashFunctionsCube, 0);
     } else {
         tableSize = (int) pow(2, kk);
-        hc = new CosineHyperCube<double>(d, m, kk, probes, hashFunctions, 0);
+        hc = new CosineHyperCube<double>(d, m, kk, probes, hashFunctionsCube, 0);
     }
 
     for (int n = 0; n < sample->size(); ++n) {
@@ -220,10 +220,13 @@ int main(int argc, char *argv[]) {
                 vector<Cluster<double> *> *clusters0 = clustering->getClusters();
 
                 // silhouette
+                logger->log("silhouette");
+
                 Silhouette<double> *silhouette = new Silhouette<double>(clusters0, metric);
                 double sil = silhouette->getMean();
 
                 // output
+                logger->log("output");
                 string algorithm = "";
                 algorithm += std::to_string(init->getId());
                 algorithm += std::to_string(assignment->getId());
