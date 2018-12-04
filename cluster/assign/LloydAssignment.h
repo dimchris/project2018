@@ -13,7 +13,7 @@ template<class T>
 class LloydAssignment : public Assignment<T> {
 
 public:
-    LloydAssignment(Metric<T> *metric) : Assignment<T>(metric) {Assignment<T>::id = 1;}
+    LloydAssignment(Metric<T> *metric) : Assignment<T>(metric) { Assignment<T>::id = 1; }
 
     void assign(std::vector<MyVector<T> *> *sample, std::vector<Cluster<T> *>
 
@@ -21,8 +21,24 @@ public:
         // init clusters
         for (int i = 0; i < clusters->size(); i++)
             clusters->at(i)->init();
-        typename std::vector<MyVector<T> *>::iterator it;
-        for (it = sample->begin(); it != sample->end(); ++it) {
+        // and get the centroids
+        std::set<MyVector<T> *, Compare<T>> centroids;
+        // set of vectors to be assigned
+        std::set<MyVector<T> *, Compare<T>> assign;
+
+        for (int i = 0; i < clusters->size(); ++i) {
+            Cluster<T> *cluster_a = clusters->at(i);
+            centroids.insert(cluster_a->getCentroid());
+        }
+
+        // remove centroids from assigned
+        typename std::set<MyVector<T> *, Compare<T> >::iterator it;
+        for (it = centroids.begin(); it != centroids.end(); ++it) {
+            assign.erase(*it);
+        }
+
+        assign.insert(sample->begin(), sample->end());
+        for (it = assign.begin(); it != assign.end(); ++it) {
             double distance0 = std::numeric_limits<double>::max();
             Cluster<T> *closest = NULL;
             for (int i = 0; i < clusters->size(); i++) {
@@ -33,10 +49,9 @@ public:
                 }
             }
             closest->assign(*it);
-            assert((*it)->getSize() == 203);
         }
         int total = 0;
-        for(int i = 0; i<clusters->size(); i++){
+        for (int i = 0; i < clusters->size(); i++) {
             total += clusters->at(i)->getAssigned()->size();
         }
     }
