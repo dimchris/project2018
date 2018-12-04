@@ -199,7 +199,7 @@ int main(int argc, char *argv[]) {
     myfile.open(file_output);
 
     for (int i = 0; i < 2; ++i) {
-        for (int j = 1; j < 3; ++j) {
+        for (int j = 0; j < 3; ++j) {
             for (int l = 0; l < 2; ++l) {
                 init = inits[i];
                 assignment = assignments[j];
