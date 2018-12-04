@@ -45,6 +45,7 @@ public:
         double radius = distance0 / 2;
         int total_assigned = 1;
         while (assign.size() > 0 && total_assigned != 0) {
+            total_assigned = 0;
             // query for centroids until to more to be assigned
             //crete a map of all to be assigned
             std::map<MyVector<T> *, std::vector<MyVector<T> *> > to_be_asigned;
@@ -57,9 +58,9 @@ public:
                 if (neighbors0.size() == 0)
                     continue;
                 //add to the map
-                typename std::set<MyVector<T> *, Compare<T> >::iterator it0;
-                for (it0 = assign.begin(); it0 != assign.end(); ++it0) {
-                    to_be_asigned[*it0].push_back(*it);
+                typename std::set<Neighbor<T> *, Compare<T> >::iterator it0;
+                for (it0 = neighbors0.begin(); it0 != neighbors0.end(); ++it0) {
+                    to_be_asigned[(*it0)->getVector()].push_back(*it);
                 }
             }
             // check all the map
@@ -98,6 +99,23 @@ public:
             typename std::set<MyVector<T> *, Compare<T> >::iterator it2;
             for (it2 = to_be_removed.begin(); it2 != to_be_removed.end(); ++it2) {
                 assign.erase(*it2);
+            }
+        }
+        // if more to be assigned assign them to the nearest centroid
+        if (assign.size() > 0) {
+            typename std::set<MyVector<T> *, Compare<T> >::iterator it0;
+            for (it0 = assign.begin(); it0 != assign.end(); ++it0) {
+                // get the closest centroid
+                distance0 = std::numeric_limits<double>::max();
+                Cluster<T> *closest = NULL;
+                for (int j = 0; j < clusters->size(); j++) {
+                    double distance = lsh->getMetric()->distance(clusters->at(j)->getCentroid(), *it0);
+                    if (distance < distance0) {
+                        distance0 = distance;
+                        closest = clusters->at(j);
+                    }
+                }
+                closest->assign(*it0);
             }
         }
     }

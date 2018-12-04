@@ -31,6 +31,8 @@
 #include "LSH/CosineLSHInt.h"
 #include "HyperCube/EuclideanHyperCubeInt.h"
 #include "HyperCube/CosineHyperCubeInt.h"
+#include "Hashing/FFunctionCube.h"
+#include "Hashing/RandomProjectionCube.h"
 
 using namespace std;
 
@@ -129,12 +131,18 @@ int main(int argc, char *argv[]) {
     // set hashfunctions
     // prepare the hashfunctions
     HashFunction<double> *hashFunctions[L];
+    HashFunction<double> *hashFunctionsCube[1];
     for (int i = 0; i < L; i++) {
-        if (type_metric == "euclidean")
+        if (type_metric == "euclidean") {
             hashFunctions[i] = new FFunction<double>(d, kk, tableSize / 8, r, w);
-        else
+        } else {
             hashFunctions[i] = new RandomProjection<double>(d, kk);
-
+        }
+    }
+    if (type_metric == "euclidean") {
+        hashFunctionsCube[0] = new FFunctionCube<double>(d, kk, w);
+    } else {
+        hashFunctionsCube[0] = new RandomProjectionCube<double>(d, kk);
     }
 
     // set lsh
@@ -152,6 +160,11 @@ int main(int argc, char *argv[]) {
     } else {
         tableSize = (int) pow(2, kk);
         hc = new CosineHyperCube<double>(d, m, kk, probes, hashFunctions, 0);
+    }
+
+    for (int n = 0; n < sample->size(); ++n) {
+        lsh->addPoint(sample->at(n));
+//        hc->addPoint(sample->at(n));
     }
 
     // inits
@@ -186,7 +199,7 @@ int main(int argc, char *argv[]) {
     myfile.open(file_output);
 
     for (int i = 0; i < 2; ++i) {
-        for (int j = 0; j < 3; ++j) {
+        for (int j = 1; j < 3; ++j) {
             for (int l = 0; l < 2; ++l) {
                 init = inits[i];
                 assignment = assignments[j];
