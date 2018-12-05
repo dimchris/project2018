@@ -35,11 +35,16 @@ public:
             for (int k = 0; k < vector0->size(); ++k) {
                 new_centroid->getVector()->at(k) /= total;
             }
-            // delete previous cendroid
-            if (clusters->at(i)->getCentroid()->getId().find("centroid_") != 0)
-                delete clusters->at(i)->getCentroid();
-            // set new centroid
-            clusters->at(i)->setCentroid(new_centroid);
+            if(total > 0){
+                // delete previous cendroid
+                if (clusters->at(i)->getCentroid()->getId().find("centroid_") != 0)
+                    delete clusters->at(i)->getCentroid();
+                // set new centroid
+                clusters->at(i)->setCentroid(new_centroid);
+            }else{
+                delete new_centroid;
+                new_centroid = NULL;
+            }
         }
     }
 
