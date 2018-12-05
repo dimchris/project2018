@@ -262,12 +262,10 @@ int main(int argc, char *argv[]) {
                     myfile << clusters0->at(l)->getMeanSil() << ",";
                 }
                 myfile << sil << "]" << endl;
-                myfile.close();
                 // if complete
                 if (complete == "true") {
                     for (int j = 0; j < clusters0->size(); ++j) {
                         myfile << "CLUSTER-" << j << " {";
-                        for (int i = 0; i < clusters0->at(j)->getAssigned()->size(); ++i) {
                             set<MyVector<double> *, Compare<double >> *assigned = clusters0->at(j)->getAssigned();
                             typename std::set<MyVector<double> *, Compare<double> >::iterator it;
                             for (it = assigned->begin(); it != assigned->end(); ++it) {
@@ -278,11 +276,11 @@ int main(int argc, char *argv[]) {
                                 it--;
                             }
                             myfile << "}" << endl;
-                        }
-
                     }
 
                 }
+                //clean memory
+                delete clustering;
 
             }
         }
@@ -300,6 +298,6 @@ int main(int argc, char *argv[]) {
         delete sample->at(i);
     logger->log("DONE");
     logger->destroy();
-    delete logger;
+//    delete logger;
     return 0;
 }
