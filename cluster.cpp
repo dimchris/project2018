@@ -196,6 +196,7 @@ int main(int argc, char *argv[]) {
 
     // output file
     ofstream myfile;
+    file_output += "_" + to_string(k);
     myfile.open(file_output);
 
     for (int i = 0; i < 2; ++i) {
@@ -220,10 +221,11 @@ int main(int argc, char *argv[]) {
                 vector<Cluster<double> *> *clusters0 = clustering->getClusters();
 
                 // silhouette
-                logger->log("silhouette");
+                logger->log("silhouette:");
 
                 Silhouette<double> *silhouette = new Silhouette<double>(clusters0, metric);
                 double sil = silhouette->getMean();
+                std::cout << sil << std::endl;
 
                 // output
                 logger->log("output");
@@ -266,16 +268,16 @@ int main(int argc, char *argv[]) {
                 if (complete == "true") {
                     for (int j = 0; j < clusters0->size(); ++j) {
                         myfile << "CLUSTER-" << j << " {";
-                            set<MyVector<double> *, Compare<double >> *assigned = clusters0->at(j)->getAssigned();
-                            typename std::set<MyVector<double> *, Compare<double> >::iterator it;
-                            for (it = assigned->begin(); it != assigned->end(); ++it) {
-                                myfile << (*it)->getId();
-                                it++;
-                                if (it != assigned->end())
-                                    myfile << ",";
-                                it--;
-                            }
-                            myfile << "}" << endl;
+                        set<MyVector<double> *, Compare<double >> *assigned = clusters0->at(j)->getAssigned();
+                        typename std::set<MyVector<double> *, Compare<double> >::iterator it;
+                        for (it = assigned->begin(); it != assigned->end(); ++it) {
+                            myfile << (*it)->getId();
+                            it++;
+                            if (it != assigned->end())
+                                myfile << ",";
+                            it--;
+                        }
+                        myfile << "}" << endl;
                     }
 
                 }
