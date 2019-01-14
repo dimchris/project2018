@@ -8,22 +8,26 @@
 
 #include "Tweet.h"
 #include "Score.h"
+#include "../Model/MyVector.h"
 
-class User {
+class User : public MyVector<double> {
 
 private:
     long id;
     std::vector<Tweet *> tweets;
     std::map<std::string, Score> scores;
     std::set<std::string> cryptos;
+    std::set<std::string> validate;
     double mean;
     bool isZero;
     std::set<User *> neighbors;
     std::set<std::string> unknownCryptos;
 
-    static double sim(std::vector<double> vector0, std::vector<double> vector1);
+    static double sim(std::vector<double> *vector0, std::vector<double> *vector1);
 
     static double dotProduct(std::vector<double> *vector0, std::vector<double> *vector1);
+
+    std::vector<double> getValidationVector();
 public:
 
     User(long id);
@@ -60,6 +64,12 @@ public:
 
     void setNeighbors(const std::set<User *> &neighbors);
 
+    const std::set<std::string> &getValidate() const;
+
+    void setValidate(const std::set<std::string> &validate);
+
+    void addValidate(std::string);
+
     void addTweet(Tweet *tweet);
 
     void calcScores(std::map<std::string, std::set<std::string> *> &cryptos);
@@ -70,13 +80,36 @@ public:
 
     static double sim(User *user0, User *user1);
 
-    void evalUnknown(std::vector<User *> neighbors);
+    void evalUnknown(std::vector<User *> &neighbors);
 
     void setScore(std::string key, double value);
 
     void addNeighbor(User *user);
 
     void clearNeighbors();
+
+    // from MyVector
+
+    void setId(const std::string &id) override;
+
+    std::vector<double> *getVector() const override;
+
+    void setVector(std::vector<double> *vector) override;
+
+    int getSize() const override;
+
+    std::vector<std::string> getRecommended(int total);
+
+    void evalUnknown(std::vector<User *> &users, std::map<std::string, double> &sims);
+
+    double mae(std::vector<User *> &users, std::string key);
+
+    void setValidation(std::string key);
+
+    void resetValidation();
+
+    bool isZeroValidation();
+
 };
 
 
