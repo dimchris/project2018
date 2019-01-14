@@ -13,6 +13,7 @@ template<class T>
 class MyVector {
 private:
     std::string id;
+protected:
     std::vector<T> *vector;
     int size;
 public:
@@ -20,21 +21,27 @@ public:
         return id;
     }
 
-    void setId(const std::string &id) {
+    virtual void setId(const std::string &id) {
         MyVector::id = id;
     }
 
-    std::vector<T> *getVector() const {
+    virtual std::vector<T> *getVector() const {
         return vector;
     }
 
-    void setVector(std::vector<T> *vector) {
+    virtual void setVector(std::vector<T> *vector) {
         MyVector::vector = vector;
+        size = vector->size();
     }
 
-    int getSize() const { return size; }
+    virtual int getSize() const { return size; }
 
-    MyVector(std::string id, std::vector<T> *vector) : id(id), vector(vector) { size = vector->size(); }
+    MyVector(std::string id, std::vector<T> *vector) : id(id), vector(vector) {
+        if (vector)
+            size = vector->size();
+        else
+            size = 0;
+    }
 
     ~MyVector() { delete vector; }
 
@@ -46,13 +53,14 @@ public:
 template<>
 inline void MyVector<double>::add(const MyVector<double> &a) {
     for (int j = 0; j < this->getSize(); ++j) {
-        this->vector->at(j) +=  a.getVector()->at(j);
+        this->vector->at(j) += a.getVector()->at(j);
     }
 }
+
 template<>
 inline void MyVector<int>::add(const MyVector<int> &a) {
     for (int j = 0; j < this->getSize(); ++j) {
-        this->vector->at(j) +=  a.getVector()->at(j);
+        this->vector->at(j) += a.getVector()->at(j);
     }
 }
 
