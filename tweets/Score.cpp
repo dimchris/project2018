@@ -23,7 +23,7 @@ void Score::setIsSet(bool isSet) {
     Score::isSet = isSet;
 }
 
-Score::Score(double score) : isSet(true), value(score), isNormalized(false) {}
+Score::Score(double score) : isSet(true), value(score), isNormalized(false), isValidate(false) {}
 
 Score::Score() : isSet(false), value(0.0) {}
 
@@ -38,4 +38,12 @@ void Score::setIsNormalized(bool isNormalized) {
 void Score::normalize(double value) {
     this->value = value;
     this->isNormalized = true;
+}
+
+bool Score::isIsValidate() const {
+    return isValidate;
+}
+
+void Score::setIsValidate(bool isValidate) {
+    Score::isValidate = isValidate;
 }

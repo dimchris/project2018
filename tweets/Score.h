@@ -10,6 +10,7 @@ class Score {
 private:
     bool isSet;
     bool isNormalized;
+    bool isValidate;
     double value;
 public:
     Score(double score);
@@ -27,6 +28,10 @@ public:
     bool isIsNormalized() const;
 
     void setIsNormalized(bool isNormalized);
+
+    bool isIsValidate() const;
+
+    void setIsValidate(bool isValidate);
 
     void normalize(double value);
 
