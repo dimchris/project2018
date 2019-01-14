@@ -6,12 +6,49 @@
 #include "UtilClasses/Utils.h"
 #include "tweets/Tweet.h"
 #include "tweets/User.h"
+#include "Hashing/HashFunction.h"
+#include "Hashing/FFunction.h"
+#include "LSH/CosineLSHDouble.h"
+#include "cluster/init/RandomInit.h"
+#include "cluster/update/VUpdate.h"
+#include "cluster/assign/PAMAssignment.h"
+#include "Metrics/EuclideanMetric.h"
+#include "cluster/ClusteringVector.h"
+#include "cluster/evaluate/EvalDef.h"
+#include "UtilClasses/MyLogger.h"
+#include "UtilClasses/Timer.h"
+#include "UtilClasses/Parameters.h"
+
+void handle_recommmended(User *user, std::vector<std::string> *vector, bool nonZero, std::ofstream &outputFileStream);
 
 using namespace std;
 
 int main(int argc, char *argv[]) {
     string file_input = "tweets_dataset_small.csv";
     string file_output = "output";
+    ofstream myfile(file_output);
+    int p = 20;
+
+    // get logger
+    MyLogger *logger = MyLogger::getInstance();
+    logger->setLevel(MyLogger::INFO);
+    // get the parameters
+
+    Parameters params(argc, argv);
+
+    file_input = params.getParam("-d");
+    file_output = params.getParam("-o");
+
+    // check parameters
+    if (file_input.empty() || file_output.empty()) {
+        logger->error("input & output files are mandatory\n");
+        return 0;
+    }
+
+
+
+    logger->info("Reading input files.");
+
 
     // get crypto-currencies in interest
 
@@ -21,15 +58,17 @@ int main(int argc, char *argv[]) {
 
     // create a map file to hold the cryptos
     map<string, set<string> *> cryptos;
+    vector<string> crypto_ids;
     // for each line get the cryptos
     int total_cryptos = 0;
     while (getline(infile, line)) {
+        vector<string> names = Utils::split(line, '\t');
         total_cryptos++;
-        string crypto_id = "crypto_" + to_string(total_cryptos);
+        string crypto_id = names.at(0);
+        crypto_ids.push_back(crypto_id);
         set<string> *crypto_set = new set<string>;
         cryptos[crypto_id] = crypto_set;
         // get the names
-        vector<string> names = Utils::split(line, '\t');
         // add each name to the set
         for (int j = 0; j < names.size(); j++) {
             crypto_set->insert(names.at(j));
@@ -56,6 +95,10 @@ int main(int argc, char *argv[]) {
     // vector of tweets
     vector<Tweet *> tweets;
     long total_records = 0;
+    // get the P
+    getline(infile, line);
+    const vector<string> p_line = Utils::split(line, '=');
+    p = stoi(p_line[1]);
     while (getline(infile, line)) {
         total_records++;
         const vector<string> items = Utils::split(line, '\t');
@@ -96,10 +139,157 @@ int main(int argc, char *argv[]) {
         }
         prvUserId = userId;
     }
+    // normalize last user
+    users.at(users.size() - 1)->calcScores(cryptos);
+    users.at(users.size() - 1)->normalize();
 
+//     get the sims map
 
-    // get neighbors
+    logger->info("Evaluating sim map. This will take a while..");
+    map<string, double> sims;
+    for (int i = 0; i < (users.size() - 1); ++i) {
+        if (users.at(i)->isIsZero())
+            continue;
+        for (int j = 0; j < users.size(); ++j) {
+            if (users.at(j)->isIsZero())
+                continue;
+            sims[to_string(users.at(i)->getId()) + "_" + to_string(users.at(j)->getId())] = users.at(i)->sim(
+                    users.at(i), users.at(j));
+            // add the reverse too
+            sims[to_string(users.at(j)->getId()) + "_" + to_string(users.at(i)->getId())] = sims[
+                    to_string(users.at(i)->getId()) + "_" + to_string(users.at(j)->getId())];
+        }
+    }
 
+    // init timer
+    Timer timer = Timer();
+    // get neighbors using LSH
+    //A1
+    myfile << "Problem A1" << endl;
+    logger->info("Running A1 problem");
+    timer.startTimer();
+    // init LSH
+
+    // prepare the hashfunctions
+    int tableSize = users.size();
+    int d = users.at(0)->getVector()->size();
+    int l = 5;
+    int k = 4;
+    int r[] = {1, 1, 1, 1};
+    int w = 4;
+    HashFunction<double> *hashFunctions[l];
+    for (int i = 0; i < l; i++)
+        hashFunctions[i] = new FFunction<double>(d, k, tableSize, r, w);
+    LSH<double> *lsh = new CosineLSHDouble(d, l, tableSize, hashFunctions, 0);
+
+    for (int m = 0; m < users.size(); ++m) {
+        if (!users.at(m)->isIsZero()) {
+            lsh->addPoint(users.at(m));
+        }
+    }
+
+    //for each user get the neighbors
+
+    for (int n = 0; n < users.size(); ++n) {
+        if (users.at(n)->isIsZero()) {
+            handle_recommmended(users.at(n), NULL, false, myfile);
+            continue;
+        }
+        const set<MyVector<double> *, Compare<double>> user_neighbors = lsh->getNeighbors(
+                users.at(n)); // this will return the bucket sorted by the closest
+        // get the top p
+        vector<User *> user_neighbors_vector;
+        set<MyVector<double> *, Compare<double>>::iterator it;
+        int total = 0;
+        for (it = user_neighbors.begin(); it != user_neighbors.end(); ++it) {
+            // if same user continue
+            if (users.at(n) == *it)
+                continue;
+            // if zero user continue
+            if (users.at(n)->isIsZero())
+                continue;
+            if (total == p)
+                break;
+            user_neighbors_vector.push_back((User *) (*it));
+            total++;
+        }
+        // predict rating
+        users.at(n)->evalUnknown(user_neighbors_vector, sims);
+        vector<string> rec = users.at(n)->getRecommended(5);
+        handle_recommmended(users.at(n), &rec, true, myfile);
+    }
+
+    myfile << "Execution Time: " + to_string(timer.stopTimer()) << endl;
+
+    delete lsh;
+    for (int l1 = 0; l1 <l ; ++l1) {
+        delete hashFunctions[l];
+    }
+
+//     get neighbors using clustering
+
+    EuclideanMetric<double> metric = EuclideanMetric<double>();
+    int kk = 45;
+
+    // inits
+    RandomInit<double> init = RandomInit<double>(kk);
+    //Assigments
+    PAMAssignment<double> assignment = PAMAssignment<double>(&metric);
+    //updates
+    VUpdate<double> update = VUpdate<double>();
+
+    EvalDef<double> eval = EvalDef<double>(&metric);
+    double epsilon = 0.000001;
+//
+//    // clustering
+    myfile << "Problem A2" << endl;
+    logger->info("Running A2 problem");
+
+    timer.reset();
+    timer.startTimer();
+
+    // workaround for myvector std vector
+    std::vector<MyVector<double> *> users_myvector;
+    for (int i1 = 0; i1 < users.size(); ++i1) {
+        if (!users.at(i1)->isIsZero())
+            users_myvector.push_back((MyVector<double> *) users.at(i1));
+    }
+    ClusteringVector<double> clustering = ClusteringVector<double>(&users_myvector, &init, &assignment, &update, &eval,
+                                                                   kk, epsilon);
+
+    clustering.run();
+
+    vector<Cluster<double> *> *clusters0 = clustering.getClusters();
+
+    for (int k1 = 0; k1 < clusters0->size(); ++k1) {
+        // get the neighbors
+        set<MyVector<double> *, Compare<double>> *neighbors = clusters0->at(k1)->getAssigned();
+        // for each user in neighbor
+        set<MyVector<double> *, Compare<double>>::iterator it;
+        vector<User *> neighbors_vector;
+        for (it = neighbors->begin(); it != neighbors->end(); ++it) {
+            User *user0 = (User *) *it;
+            neighbors_vector.push_back(user0);
+        }
+        for (it = neighbors->begin(); it != neighbors->end(); ++it) {
+            User *user = (User *) *it;
+            // predict scores
+            user->evalUnknown(neighbors_vector, sims);
+        }
+    }
+    delete clusters0;
+
+    // print results
+    for (int i = 0; i < users.size(); i++) {
+        if (users.at(i)->isIsZero())
+            handle_recommmended(users.at(i), NULL, false, myfile);
+        else {
+            vector<string> recommented = users.at(i)->getRecommended(5);
+            handle_recommmended(users.at(i), &recommented, true, myfile);
+        }
+
+    }
+    myfile << "Execution Time: " + to_string(timer.stopTimer()) << endl;
 
     // get clusters
     vector<vector<long> > clusters = {
@@ -155,22 +345,164 @@ int main(int argc, char *argv[]) {
             {1060, 1208, 1219, 1229, 131,  1322, 1522, 1586, 1604, 173,  1757, 2048, 2152, 2378, 2522, 2665, 2780, 2781, 285,  2866, 2873, 291,  3116, 3233, 3246, 3291, 3496, 3600, 3624, 3666, 3789, 4009, 4311, 4322, 4620, 4655, 4675, 4876, 4922, 549,  577},
     };
     // set tweet neighbors
+    vector<User *> vusers;
+    // for each cluster create a virtual user and add the tweets of the cluster
     for (int i = 0; i < clusters.size(); i++) {
-        vector<long > neighborhood = clusters[i];
+        vector<long> neighborhood = clusters[i];
+        User *vuser = new User(-i);
         for (int j = 0; j < neighborhood.size(); ++j) {
-            for (int k = 0; k < neighborhood.size() ; ++k) {
-                if(k!=j)
-                    tweets.at(j)->addNeighbor(tweets.at(k));
-            }
+            vuser->addTweet(tweets.at(clusters.at(i).at(j) - 1));
+        }
+        vuser->calcScores(cryptos);
+        vuser->normalize();
+        vusers.push_back(vuser);
+    }
+    // B1
+    myfile << "Problem B1" << endl;
+    logger->info("Running B1 problem");
+    timer.reset();
+    timer.startTimer();
+
+
+    // lsh get to p
+    for (int i = 0; i < l; i++)
+        hashFunctions[i] = new FFunction<double>(d, k, tableSize, r, w);
+    lsh = new CosineLSHDouble(d, l, tableSize, hashFunctions, 0);
+
+    // add vusers
+    for (int m = 0; m < vusers.size(); ++m) {
+        if (!vusers.at(m)->isIsZero()) {
+            lsh->addPoint(vusers.at(m));
         }
     }
+    // get neighbors and calc recommented
+    for (int n = 0; n < users.size(); ++n) {
+        if (users.at(n)->isIsZero()) {
+            handle_recommmended(users.at(n), NULL, false, myfile);
+            continue;
+        }
+        const set<MyVector<double> *, Compare<double>> user_neighbors = lsh->getNeighbors(
+                users.at(n)); // this will return the bucket sorted by the closest
+        // get the top p
+        vector<User *> user_neighbors_vector;
+        set<MyVector<double> *, Compare<double>>::iterator it;
+        int total = 0;
+        for (it = user_neighbors.begin(); it != user_neighbors.end(); ++it) {
+            // if same user continue
+            if (users.at(n) == *it)
+                continue;
+            // if zero user continue
+            if (users.at(n)->isIsZero())
+                continue;
+            if (total == p)
+                break;
+            user_neighbors_vector.push_back((User *) (*it));
+            total++;
+        }
+        // predict rating
+        users.at(n)->evalUnknown(user_neighbors_vector);
+        vector<string> rec = users.at(n)->getRecommended(2);
+        handle_recommmended(users.at(n), &rec, true, myfile);
+    }
+    myfile << "Execution Time: " + to_string(timer.stopTimer()) << endl;
+    delete lsh;
+    for (int l1 = 0; l1 <l ; ++l1) {
+        delete hashFunctions[l];
+    }
+
+
+    // B2
+    myfile << "Problem B2" << endl;
+    logger->info("Running B2 problem");
+    metric = EuclideanMetric<double>();
+    kk = 10;
+
+    // inits
+    init = RandomInit<double>(kk);
+    //Assigments
+    assignment = PAMAssignment<double>(&metric);
+    //updates
+    update = VUpdate<double>();
+
+    eval = EvalDef<double>(&metric);
+    epsilon = 0.000001;
+
+    // clustering
+    timer.reset();
+    timer.startTimer();
+
+    for (int i = 0; i < users.size(); ++i) {
+        if (users.at(i)->isIsZero()) {
+            handle_recommmended(users.at(i), NULL, false, myfile);
+            continue;
+        }
+        // workaround for myvector std vector
+        std::vector<MyVector<double> *> vusers_myvector;
+        for (int i1 = 0; i1 < vusers.size(); ++i1) {
+            if (!vusers.at(i1)->isIsZero())
+                vusers_myvector.push_back((MyVector<double> *) vusers.at(i1));
+        }
+        // add the user
+        vusers_myvector.push_back((MyVector<double> *) users.at(i));
+        clustering = ClusteringVector<double>(&vusers_myvector, &init, &assignment, &update, &eval,
+                                              kk, epsilon);
+
+        clustering.run();
+        // find the cluster containing the user
+        vector<Cluster<double> *> *cluster0 = clustering.getClusters();
+        for (int j = 0; j < cluster0->size(); ++j) {
+            // if user in this cluster
+            if (cluster0->at(j)->getAssigned()->find((MyVector<double> *) users.at(i)) !=
+                cluster0->at(j)->getAssigned()->end()) {
+                set<MyVector<double> *, Compare<double>> *neighbors = cluster0->at(j)->getAssigned();
+                set<MyVector<double> *, Compare<double>>::iterator it;
+                vector<User *> neighbors_vector;
+                for (it = neighbors->begin(); it != neighbors->end(); ++it) {
+                    User *user0 = (User *) *it;
+                    neighbors_vector.push_back(user0);
+                }
+                users.at(i)->evalUnknown(neighbors_vector);
+                vector<string> recommends = users.at(i)->getRecommended(2);
+                handle_recommmended(users.at(i), &recommends, true, myfile);
+            }
+        }
+        delete cluster0;
+    }
+    myfile << "Execution Time: " + to_string(timer.stopTimer()) << endl;
+
 
 
     // clean memory
 
     // clean cryptos
-    for (int i = 0; i < total_cryptos; i++) {
-        delete cryptos["crypto_" + to_string(i)];
+    for (int i = 0; i < crypto_ids.size(); i++) {
+        delete cryptos[crypto_ids[i]];
     }
+    // clean users
+    for (int m1 = 0; m1 < users.size(); ++m1) {
+        delete users.at(m1);
+    }
+    // clean vusers
+    for (int n1 = 0; n1 < vusers.size(); ++n1) {
+        delete vusers.at(n1);
+    }
+    logger->log("DONE");
+    logger->destroy();
     return 0;
+}
+
+void handle_recommmended(User *user, vector <string> *vector, bool nonZero, ofstream &outputFileStream) {
+    outputFileStream << user->getId() << " ";
+    if (!nonZero || vector->size() == 0) {
+        outputFileStream << "could not recommend: ";
+        if (!nonZero)
+            outputFileStream << "zero vector" << endl;
+        else
+            outputFileStream << "no neighbors found" << endl;
+        return;
+    }
+    for (int i = 0; i < vector->size(); ++i) {
+        outputFileStream << vector->at(i) << " ";
+    }
+    outputFileStream << endl;
 }
