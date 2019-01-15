@@ -86,10 +86,10 @@ LSH<T>::~LSH() {
         delete[] hashTables;
     }
     // delete vectors
-    typename std::list<MyVector<T> *>::const_iterator iterator;
-    for (iterator = vectors.begin(); iterator != vectors.end(); ++iterator) {
-        delete *iterator;
-    }
+//    typename std::list<MyVector<T> *>::const_iterator iterator;
+//    for (iterator = vectors.begin(); iterator != vectors.end(); ++iterator) {
+//        delete *iterator;
+//    }
 }
 
 template<class T>

@@ -222,9 +222,7 @@ int main(int argc, char *argv[]) {
     myfile << "Execution Time: " + to_string(timer.stopTimer()) << endl;
 
     delete lsh;
-    for (int l1 = 0; l1 <l ; ++l1) {
-        delete hashFunctions[l];
-    }
+
 
 //     get neighbors using clustering
 
@@ -406,9 +404,6 @@ int main(int argc, char *argv[]) {
     }
     myfile << "Execution Time: " + to_string(timer.stopTimer()) << endl;
     delete lsh;
-    for (int l1 = 0; l1 <l ; ++l1) {
-        delete hashFunctions[l];
-    }
 
 
     // B2
